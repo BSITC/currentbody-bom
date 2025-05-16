@@ -1,0 +1,16 @@
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^.* - [L]
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+RewriteCond $1 !^(index\.php|images|robots\.txt)
+#RewriteRule ^(.*)$ /index.php?/$1 [QSA,L]
+
+<IfModule mod_php5.c>
+    RewriteRule ^(.*)$ index.php/$1 [L]
+</IfModule>
+
+<IfModule !mod_php5.c>
+    RewriteRule ^(.*)$ index.php?/$1 [L]
+</IfModule>
+
