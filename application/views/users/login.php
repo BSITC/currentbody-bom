@@ -9,11 +9,11 @@ $login_user_data = $this->session->userdata('login_user_data');
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-        <meta name="description" content="Explore Peoplevox Integration by b.solutions, designed to streamline your e-commerce operations and enhance your online store's functionality.">
+        <meta name="description" content="Explore Brightpearl BOM Integration by b.solutions, designed to streamline your e-commerce operations and enhance your online store's functionality.">
 
         <!-- Open Graph Meta Tags -->
-        <meta property="og:title" content="Brightpearl | Peoplevox Integration by b.solutions" />
-        <meta property="og:description" content="Your b.solutions Brightpearl | Peoplevox integration is here." />
+        <meta property="og:title" content="Brightpearl BOM Integration by b.solutions" />
+        <meta property="og:description" content="Your b.solutions Brightpearl BOM integration is here." />
 
         <meta property="og:type" content="website" />
         <meta property="og:url" content="<?php echo base_url(); ?>/users/login" />
@@ -112,9 +112,9 @@ $login_user_data = $this->session->userdata('login_user_data');
     <script src="<?php echo $this->config->item('script_url');?>assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
     <script src="<?php echo $this->config->item('script_url');?>assets/global/plugins/jquery.blockui.min.js" type="text/javascript"></script>
     <script src="<?php echo $this->config->item('script_url');?>assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js" type="text/javascript"></script>
-    <script src="<?php echo $this->config->item('script_url');?>assets/global/plugins/jquery-validation/js/jquery.validate.min.js" type="text/javascript"></script>
-    <script src="<?php echo $this->config->item('script_url');?>assets/global/plugins/jquery-validation/js/additional-methods.min.js" type="text/javascript"></script>
-    <script src="<?php echo $this->config->item('script_url');?>assets/global/plugins/select2/js/select2.full.min.js" type="text/javascript"></script>
+    <!-- <script src="<?php //echo $this->config->item('script_url');?>assets/global/plugins/jquery-validation/js/jquery.validate.min.js" type="text/javascript"></script>
+    <script src="<?php //echo $this->config->item('script_url');?>assets/global/plugins/jquery-validation/js/additional-methods.min.js" type="text/javascript"></script> -->
+    <!-- <script src="<?php //echo $this->config->item('script_url');?>assets/global/plugins/select2/js/select2.full.min.js" type="text/javascript"></script> -->
     <script src="<?php echo $this->config->item('script_url');?>assets/global/plugins/backstretch/jquery.backstretch.min.js" type="text/javascript"></script>
     <script src="<?php echo $this->config->item('script_url');?>assets/global/scripts/app.min.js" type="text/javascript"></script>
 
