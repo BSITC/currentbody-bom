@@ -1818,4 +1818,241 @@ class Webhooks extends CI_Controller {
 		}
 		echo "<pre>";print_r(json_encode($productArr)); echo "</pre>";die(__FILE__.' : Line No :'.__LINE__);
 	}
+
+	# DB Maintenance - Delete old logs - Weakly
+	public function deleteLogs()
+	{
+		if ($this->db->tableExists('cron_management')) {
+			$checkTypes = array('orders', 'products', 'shopifyProducts', 'goodsout', 'goodsin', 'stock_correction', 'sales1', 'purchase1', 'stocktransfer', 'bpproduct1', 'sales_order', 'customers', 'purchase_order', 'salescreditpayment1', 'salesCredit1', 'dispatch1', 'sales1', 'dispatch', 'sales', 'refund', 'product', 'sales_credit', 'bpproduct', 'autoAssemblyaligment');
+			foreach ($checkTypes as $checkType) {
+				$this->db->query("DELETE FROM cron_management  WHERE id < ( select max(id) as maxid from cron_management WHERE type='" . $checkType . "') AND type = '" . $checkType . "';");
+			}
+		}
+		if ($this->db->tableExists('api_call')) {
+			$this->db->table('api_call')->truncate();
+		}
+		if ($this->db->tableExists('ci_sessions')) {
+			$this->db->table('ci_sessions')->truncate();
+		}
+		$diffinsecond = 60 * 24 * 90; # mhd
+
+		/* if($this->db->tableExists('stock_sync_log')){
+            $sql = 'DELETE FROM stock_sync_log WHERE "created" < NOW() - INTERVAL \''.$diffinsecond.' minute\' ';
+            $this->db->query($sql);
+        } */
+		if ($this->db->tableExists('sales_reservation_history')) {
+			$sql = 'DELETE FROM sales_reservation_history WHERE "current_timestamp" < NOW() - INTERVAL \'' . $diffinsecond . ' minute\' ';
+			$this->db->query($sql);
+		}
+		if ($this->db->tableExists('orders_item_history')) {
+			$sql = 'DELETE FROM orders_item_history WHERE "current_timestamp" < NOW() - INTERVAL \'' . $diffinsecond . ' minute\' ';
+			$this->db->query($sql);
+		}
+		if ($this->db->tableExists('global_log')) {
+			$sql = 'DELETE FROM global_log WHERE "ApiStartRequst" < NOW() - INTERVAL \'' . $diffinsecond . ' minute\' ';
+			$this->db->query($sql);
+		}
+		if ($this->db->tableExists('webhooks_tracker')) {
+			$sql = 'DELETE FROM webhooks_tracker WHERE "created"::TIMESTAMP < NOW() - INTERVAL \'' . $diffinsecond . ' minute\' ';
+			$this->db->query($sql);
+		}
+
+		// extended to delete file logs as well
+		$fileDetails = array(
+			'30' => array(
+				'jobsoutput',
+				'writable/session',
+				'public/jobsoutput',
+				'webhooksapi',
+				'webhooks',
+			),
+			'90' => array(
+				'processedfile',
+				'files',
+				'oldRowData',
+				'oldCreatedRowData',
+			),
+		);
+		foreach ($fileDetails as $days => $givenFilePaths) {
+			foreach ($givenFilePaths as $givenFilePath) {
+				$filePath = FCPATH . $givenFilePath;
+				if (is_dir($filePath)) {
+					$command = "find \"" . $filePath . "\" -type f -mtime +" . $days . " -exec rm {} \;";
+					shell_exec($command);
+				}
+			}
+		}
+		echo "End of Function";
+	}
+
+	# Transaction data and logs the files - Weakly
+	public function updateOrderIdToOld($orderId = '')
+	{
+		$diffinsecond = 60 * 24 * 60; # mhd
+		$sql = 'SELECT id,"orderId",created FROM sales_order where "created"::TIMESTAMP < NOW() - INTERVAL \'' . $diffinsecond . ' minutes\' and status > 2';
+		$orderInfos = $this->db->query($sql)->getResultArray();
+
+		$orderId = array_column($orderInfos, 'orderId');
+		$orderId = array_unique($orderId);
+		sort($orderId);
+
+		$orderIds = array_chunk($orderId, 500);
+		foreach ($orderIds as $orderId) {
+			$fileArchives = array();
+			$goodsInfos = array();
+			$itemInfos = array();
+			$dispatchInfos = array();
+			$addressInfos = array();
+			if ($orderId) {
+				$orderId = array_unique($orderId);
+				$orderId = array_filter($orderId);
+				$itemInfos = $this->db->table("sales_item")->whereIn('orderId', $orderId)->get()->getResultArray();
+				// $goodsInfos = $this->db->table("sales_goodsout")->whereIn('orderId', $orderId)->where(array('status > ' => 1))->get()->getResultArray();
+				// $dispatchInfos = $this->db->table("sales_dispatch")->whereIn('orderId', $orderId)->where(array('status > ' => 0))->get()->getResultArray();
+				// $addressInfos = $this->db->table("sales_address")->whereIn('orderId', $orderId)->get()->getResultArray();
+				$salesorderInfos = $this->db->table("sales_order")->whereIn('orderId', $orderId)->get()->getResultArray();
+			}
+			$dipatchInsert = array();
+			if ($dispatchInfos) {
+				if ($this->db->tableExists('sales_dispatch_old')) {
+					$deleteDispatchIds = array();
+					$batchInserts = array();
+					foreach ($dispatchInfos as $dispatchInfo) {
+						$deleteDispatchIds[] = $dispatchInfo['id'];
+						unset($dispatchInfo['id']);
+						$batchInserts[] = $dispatchInfo;
+					}
+					if ($batchInserts) {
+						$batchInserts = array_chunk($batchInserts, 500, true);
+						foreach ($batchInserts as $batchInsert) {
+							$this->db->table("sales_dispatch_old")->insertBatch($batchInsert);
+						}
+						$this->db->table("sales_dispatch")->whereIn('id', $deleteDispatchIds)->delete();
+					}
+				}
+			}
+			if ($addressInfos) {
+				if ($this->db->tableExists('sales_address_old')) {
+					$dispatchInfos = $addressInfos;
+					$deleteDispatchIds = array();
+					$batchInserts = array();
+					foreach ($dispatchInfos as $dispatchInfo) {
+						$filepath = '/sales_address/' . (int)$dispatchInfo['account1Id'] . (int)$dispatchInfo['account2Id'] . $dispatchInfo['orderId'] . '.json';
+						$fileArchives['address_' . $dispatchInfo['orderId']] = array('source' => FCPATH . 'rowData' . $filepath, 'destination' => FCPATH . 'oldRowData/' . $filepath);
+
+						$deleteDispatchIds[] = $dispatchInfo['id'];
+						unset($dispatchInfo['id']);
+						$batchInserts[] = $dispatchInfo;
+					}
+					if ($batchInserts) {
+						$batchInserts = array_chunk($batchInserts, 500, true);
+						foreach ($batchInserts as $batchInsert) {
+							$this->db->table("sales_address_old")->insertBatch($batchInsert);
+						}
+						$this->db->table("sales_address")->whereIn('id', $deleteDispatchIds)->delete();
+					}
+				}
+			}
+
+
+			if ($itemInfos) {
+				if ($this->db->tableExists('sales_item_old')) {
+					$dispatchInfos = $itemInfos;
+					$deleteDispatchIds = array();
+					$batchInserts = array();
+					foreach ($dispatchInfos as $dispatchInfo) {
+						$filepath = '/sales_item/' . (int)$dispatchInfo['account1Id'] . (int)$dispatchInfo['account2Id'] . $dispatchInfo['orderId'] . '.json';
+						$fileArchives['item_' . $dispatchInfo['orderId']] = array('source' => FCPATH . 'rowData' . $filepath, 'destination' => FCPATH . 'oldRowData' . $filepath);
+
+						$deleteDispatchIds[] = $dispatchInfo['id'];
+						unset($dispatchInfo['id']);
+						$batchInserts[] = $dispatchInfo;
+					}
+					if ($batchInserts) {
+						$batchInserts = array_chunk($batchInserts, 500, true);
+						foreach ($batchInserts as $batchInsert) {
+							$this->db->table("sales_item_old")->insertBatch($batchInsert);
+						}
+					}
+					if ($deleteDispatchIds) {
+						$deleteDispatchIds = array_chunk($deleteDispatchIds, 500, true);
+						foreach ($deleteDispatchIds as $deleteDispatchId) {
+							$this->db->table("sales_item")->whereIn('id', $deleteDispatchId)->delete();
+						}
+					}
+				}
+			}
+
+			if ($salesorderInfos) {
+				if ($this->db->tableExists('sales_order_old')) {
+					$dispatchInfos = $salesorderInfos;
+					$deleteDispatchIds = array();
+					$batchInserts = array();
+					foreach ($dispatchInfos as $dispatchInfo) {
+
+						$filepath = '/sales_order/' . (int)$dispatchInfo['account1Id'] . (int)$dispatchInfo['account2Id'] . $dispatchInfo['orderId'] . '.json';
+						$fileArchives['sales_' . $dispatchInfo['orderId']] = array('source' => FCPATH . 'rowData' . $filepath, 'destination' => FCPATH . 'oldRowData' . $filepath);
+						$fileArchives['created_sales_' . $dispatchInfo['orderId']] = array('source' => FCPATH . 'createdRawData' . $filepath, 'destination' => FCPATH . 'oldCreatedRowData' . $filepath);
+
+						$deleteDispatchIds[] = $dispatchInfo['id'];
+						unset($dispatchInfo['id']);
+						$batchInserts[] = $dispatchInfo;
+					}
+
+					if ($batchInserts) {
+						$batchInserts = array_chunk($batchInserts, 500, true);
+						foreach ($batchInserts as $batchInsert) {
+							$this->db->table("sales_order_old")->insertBatch($batchInsert);
+						}
+					}
+					if ($deleteDispatchIds) {
+						$deleteDispatchIds = array_chunk($deleteDispatchIds, 500, true);
+						foreach ($deleteDispatchIds as $deleteDispatchId) {
+							$this->db->table("sales_order")->whereIn('id', $deleteDispatchId)->delete();
+						}
+					}
+				}
+			}
+
+			if ($goodsInfos) {
+				if ($this->db->tableExists('sales_goodsout_old')) {
+					$dispatchInfos = $goodsInfos;
+					$deleteDispatchIds = array();
+					$batchInserts = array();
+					foreach ($dispatchInfos as $dispatchInfo) {
+						$filepath = FCPATH . 'rowData/sales_goodsout/' . (int)$dispatchInfo['account1Id'] . (int)$dispatchInfo['account2Id'] . $dispatchInfo['goodsOutId'] . '.json';
+						$fileArchives['goods_' . $dispatchInfo['goodsOutId']] = array('source' => FCPATH . 'rowData' . $filepath, 'destination' => FCPATH . 'oldRowData' . $filepath);
+
+						$deleteDispatchIds[] = $dispatchInfo['id'];
+						unset($dispatchInfo['id']);
+						$batchInserts[] = $dispatchInfo;
+					}
+					if ($batchInserts) {
+						$batchInserts = array_chunk($batchInserts, 500, true);
+						foreach ($batchInserts as $batchInsert) {
+							$this->db->table("sales_goodsout_old")->insertBatch($batchInsert);
+						}
+					}
+					if ($deleteDispatchIds) {
+						$deleteDispatchIds = array_chunk($deleteDispatchIds, 500, true);
+						foreach ($deleteDispatchIds as $deleteDispatchId) {
+							$this->db->table("sales_goodsout")->whereIn('id', $deleteDispatchId)->delete();
+						}
+					}
+				}
+			}
+			if ($fileArchives) {
+				foreach ($fileArchives as $fileArchive) {
+					if (file_exists($fileArchive['source'])) {
+						if (!is_dir(dirname($fileArchive['destination']))) {
+							$baseFolder = dirname($fileArchive['destination']);
+							mkdir($baseFolder, 0777, true);
+							shell_exec("chmod -R 777 " . $baseFolder);
+						}
+						@rename($fileArchive['source'], $fileArchive['destination']);
+					}
+				}
+			}
+		}
+	}
 } 
