@@ -1,5 +1,9 @@
 <?php 
 $config = $this->db->get('account_brightpearl_config')->row_array();
+$displayWarehouses =  array();
+if($config['displayWarehouses']){
+	$displayWarehouses =  explode(",",$config['displayWarehouses']);
+}
 $allBinLocations = array();
 foreach($getAllWarehouseLocation as $temp2){
 	foreach($temp2 as $t2){
@@ -42,8 +46,15 @@ foreach($saveBinDatasTemps as $saveBinDatasTemp){
 										$maxDisambleArray = array();
 										$defaultDisplay = 0;
 										foreach ($warehouseList as $warehouse) {
-											$listTemps[] = $warehouse['id'];
-											echo '<td>'.$warehouse['name'].'</td>';
+											if(!empty($displayWarehouses)){
+												if(in_array($warehouse['id'],$displayWarehouses)){
+													$listTemps[] = $warehouse['id'];
+													echo '<td>'.$warehouse['name'].'</td>';
+												}
+											}else{
+												$listTemps[] = $warehouse['id'];
+												echo '<td>'.$warehouse['name'].'</td>';
+											}
 										}
 										?>
 									</tr>
@@ -102,8 +113,15 @@ foreach($saveBinDatasTemps as $saveBinDatasTemp){
 									$listTemps = array();
 									$width = 50 / count($warehouseList);
 									foreach ($warehouseList as $warehouse) {
-										$listTemps[] = $warehouse['id'];
-										echo '<th width="'.$width.'%">'.$warehouse['name'].'</th>';
+										if(!empty($displayWarehouses)){
+											if(in_array($warehouse['id'],$displayWarehouses)){
+												$listTemps[] = $warehouse['id'];
+												echo '<td>'.$warehouse['name'].'</td>';
+											}
+										}else{
+											$listTemps[] = $warehouse['id'];
+											echo '<th width="'.$width.'%">'.$warehouse['name'].'</th>';
+										}
 									}
 									?>
 								</tr>
