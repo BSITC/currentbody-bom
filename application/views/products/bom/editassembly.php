@@ -1,5 +1,9 @@
 <?php 
 $config = $this->db->get('account_brightpearl_config')->row_array();
+$displayWarehouses =  array();
+if($config['displayWarehouses']){
+	$displayWarehouses =  explode(",",$config['displayWarehouses']);
+}
 $autoAssembly = 0;
 if(isset($assemblyData['0']['autoAssembly'])){
 	$autoAssembly = (int)$assemblyData['0']['autoAssembly'];
@@ -94,8 +98,15 @@ $colMd = $user_session_data['accessLabel'] =='2' ? 'col-md-6' : 'col-md-2';
 										$listTemps = array();
 										$width = 50 / count($warehouseList);
 										foreach ($warehouseList as $warehouse) {
-											$listTemps[] = $warehouse['id'];
-											echo '<td>'.$warehouse['name'].'</td>';
+											if(!empty($displayWarehouses)){
+												if(in_array($warehouse['id'],$displayWarehouses)){
+													$listTemps[] = $warehouse['id'];
+													echo '<td>'.$warehouse['name'].'</td>';
+												}
+											}else{
+												$listTemps[] = $warehouse['id'];
+												echo '<td>'.$warehouse['name'].'</td>';
+											}
 										}
 										?>
 									</tr>
@@ -148,8 +159,15 @@ $colMd = $user_session_data['accessLabel'] =='2' ? 'col-md-6' : 'col-md-2';
 									$listTemps = array();$defaultDisplay = 0; $maxDisambleArray = array(); $wareHouseListDatas = array();
 									$width = 50 / count($warehouseList);
 									foreach ($warehouseList as $warehouse) {
-										$listTemps[] = $warehouse['id'];
-										echo '<th style="width:30px;">'.$warehouse['name'].'</th>';
+										if(!empty($displayWarehouses)){
+											if(in_array($warehouse['id'],$displayWarehouses)){
+												$listTemps[] = $warehouse['id'];
+												echo '<td>'.$warehouse['name'].'</td>';
+											}
+										}else{
+											$listTemps[] = $warehouse['id'];
+											echo '<td>'.$warehouse['name'].'</td>';
+										}
 									}
 									?>
 								</tr>

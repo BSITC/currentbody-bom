@@ -53,6 +53,12 @@ class Config_model extends CI_Model{
 		}else{
 			$data['fetchSalesOrderStatusExclude'] = "";
 		}
+		if($data['displayWarehouses']){
+			$data['displayWarehouses'] = array_filter($data['displayWarehouses']);
+			$data['displayWarehouses'] = implode(',', $data['displayWarehouses']);
+		}else{
+			$data['displayWarehouses'] = "";
+		}
 		if($data['id']){
 			$status = $this->db->where(array('id' => $data['id']))->update('account_brightpearl_config',$data);
 		}

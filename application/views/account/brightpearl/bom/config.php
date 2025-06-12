@@ -5,6 +5,7 @@ foreach($data['getAllWarehouseLocation'] as $temp2){
 		$allBinLocations[$t2['warehouseId']][] = $t2['name'];
 	}
 }
+$config = $this->db->get('global_config')->row_array();
 ?>
 <div class="page-content-wrapper">
     <!-- BEGIN CONTENT BODY -->
@@ -165,6 +166,22 @@ foreach($data['getAllWarehouseLocation'] as $temp2){
 										}
 										?>
 									</select>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-3">
+							<div class="form-group">
+								<label class="control-label marginStyle">Warehouses for Display<span class="required" aria-required="true"> * </span></label>
+								<div class="marginStyle">
+										<select name="data[displayWarehouses][]" multiple="multiple" data-required="1" class="form-control displayWarehouses">
+										<?php
+										$saveWarehouses = explode(",",$row['displayWarehouses']);
+										foreach ($data['warehouse'][$row['brightpearlAccountId']] as $warehouse) {
+											$selected = (in_array($warehouse['id'],$saveWarehouses))?('selected="selected"'):('');
+												echo '<option value="'.$warehouse['id'].'" '.$selected.'>'.ucwords($warehouse['name']).'</option>';
+										}
+										?>									
+									</select> 
 								</div>
 							</div>
 						</div>
