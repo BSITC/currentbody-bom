@@ -1245,6 +1245,13 @@ class Assembly_model extends CI_Model
 			if (trim($this->input->post('name'))) {
                 $where['name'] = trim($this->input->post('name'));
             } 
+			if (trim($this->input->post('qty'))) {
+                $where['qty'] = trim($this->input->post('qty'));
+            } 
+			$whereRecipeName = '';
+			if (trim($this->input->post('receipId'))) {
+                $whereRecipeName = trim($this->input->post('receipId'));
+            } 
 			if (trim($this->input->post('warehouse'))) {
                 $where['warehouse'] = trim($this->input->post('warehouse'));
             }
@@ -1325,7 +1332,12 @@ class Assembly_model extends CI_Model
 		if(!$this->globalConfig['enableImportAssembly']){
 			$query->where('isImportAssembly', '0');
 		}
-        $datas = $query->select('id,productId,createdId,receipId,sku,created,name,status, autoAssembly,username,warehouse,isOrderAssembly,costingMethod,isImportAssembly,orderId,assignToUserId,assignByUserId')->limit($limit, $start)->get('product_assembly')->result_array();
+        $datas = $query->select('id,productId,createdId,receipId,sku,created,name,qty,status, autoAssembly,username,warehouse,isOrderAssembly,costingMethod,isImportAssembly,orderId,assignToUserId,assignByUserId')->limit($limit, $start)->get('product_assembly')->result_array();
+		$recipeDatas = array();
+		$recipeDatasTemp = $this->db->get('product_bom')->result_array(); 
+		foreach($recipeDatasTemp as $recipeData){
+			$recipeDatas[$recipeData['productId']][$recipeData['receipeId']] = $recipeData;
+		}
 		$usersMappings = array();
 		$usersMappingTemps = $query->select('firstname,lastname,user_id,is_active,accessLabel')->get_where('admin_user', array('is_active' => '1'))->result_array();
 		foreach($usersMappingTemps as $usersMappingTemp){
@@ -1363,6 +1375,12 @@ class Assembly_model extends CI_Model
 			}else{
 				$costingMethod = "Cost Pricelist";
 			}
+
+			$recipeName = isset($recipeDatas[$data['productId']][$data['receipId']]) ? $recipeDatas[$data['productId']][$data['receipId']]['recipename'] : $data['receipId'];
+			if($whereRecipeName && (strtolower($recipeName) != strtolower($whereRecipeName))){
+				continue;
+			}
+
             $records["data"][] = array(
                 $workInProgress,
                 $assemblyType,
@@ -1374,7 +1392,9 @@ class Assembly_model extends CI_Model
                 $data['productId'],
                 $data['sku'],
                 $data['name'],
-                $costingMethod,
+                $data['qty'],
+                $recipeName,
+                // $costingMethod,
                '<span class="label label-sm label-' . $statusColor[$data['status']] . '">' . $status[$data['status']] . '</span>',
                 date('M d,Y h:i:s a',strtotime($data['created'])),
 				'<div class="btn-group">

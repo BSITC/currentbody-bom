@@ -59,7 +59,9 @@ $user_session_data = $this->session->userdata('login_user_data');
 									<th width="5%">Product ID </th>
 									<th width="10%"> SKU </th>	
 									<th width="10%"> Name </th>	
-									<th width="10%"> Costing Method </th>	
+									<th width="5%"> QTY </th>	
+									<th width="5%"> Recipe </th>	
+									<!-- <th width="10%"> Costing Method </th> -->
 									<th width="5%"> Status </th>	
 									<th width="10%"> Created </th>	
 									<th width="10%"> Actions </th>
@@ -100,7 +102,9 @@ $user_session_data = $this->session->userdata('login_user_data');
 									<td><input type="text" class="form-control form-filter input-sm" name="productId"> </td>
 									<td><input type="text" class="form-control form-filter input-sm" name="sku"> </td>	
 									<td><input type="text" class="form-control form-filter input-sm" name="name"> </td>	
-									<td></td>	
+									<td><input type="text" class="form-control form-filter input-sm" name="qty"> </td>	
+									<td><input type="text" class="form-control form-filter input-sm" name="receipId"> </td>	
+									<!-- <td></td> -->
 									<td>
 										<select class="form-control form-filter input-sm" name="status">
 											<option value=""> Select Status </option>
